@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { setEditingShortcuts } from '../desktop'
 import { layoutSheet } from '../layout'
 import { activeSheet } from '../model/tree'
 import { runAction } from '../actions'
@@ -234,6 +235,28 @@ export function useKeyboard(): void {
     }
 
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+
+    // macOS 会在按键到达 WebView 之前先匹配菜单快捷键，因此文本输入时
+    // 需要临时摘掉菜单上的 ⌘C/⌘V/⌘X/⌘Z/⌘A，失焦后再恢复。
+    let editing = false
+    const syncEditing = () => {
+      const next = isTextField(document.activeElement)
+      if (next === editing) return
+      editing = next
+      setEditingShortcuts(next)
+    }
+    const onFocusOut = () => {
+      // focusout 早于下一个 focusin，等一拍再读取真实焦点。
+      window.setTimeout(syncEditing, 0)
+    }
+
+    document.addEventListener('focusin', syncEditing)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('focusin', syncEditing)
+      document.removeEventListener('focusout', onFocusOut)
+      if (editing) setEditingShortcuts(false)
+    }
   }, [])
 }

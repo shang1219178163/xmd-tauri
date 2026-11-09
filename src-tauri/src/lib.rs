@@ -52,6 +52,7 @@ pub fn run() {
             commands::user_config_get,
             commands::user_config_save,
             commands::set_menu_language,
+            commands::set_editing_shortcuts,
             commands::new_window,
             commands::app_info,
             commands::list_font_families,

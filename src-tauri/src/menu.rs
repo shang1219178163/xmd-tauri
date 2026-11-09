@@ -1,4 +1,4 @@
-use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, MenuItemKind, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, EventTarget, Manager, Wry};
 
 use crate::state::AppState;
@@ -6,6 +6,51 @@ use crate::window;
 
 /// Actions that may create a window when none is open (mirrors the Electron build).
 const NEW_WINDOW_ACTIONS: &[&str] = &["new-map", "new-starter", "new-template"];
+
+/// Editing commands whose native accelerators must step aside while a text
+/// field is focused. macOS consumes menu key equivalents before the webview,
+/// so ⌘C/⌘V/⌘X/⌘Z/⌘A would otherwise run the canvas actions even in inputs.
+const EDITING_ACCELERATORS: &[(&str, &str)] = &[
+    ("undo", "CmdOrCtrl+Z"),
+    ("redo", "CmdOrCtrl+Shift+Z"),
+    ("cut", "CmdOrCtrl+X"),
+    ("copy", "CmdOrCtrl+C"),
+    ("paste", "CmdOrCtrl+V"),
+    ("select-all", "CmdOrCtrl+A"),
+];
+
+/// Drop (or restore) the accelerators of the editing menu items.
+pub fn set_editing_accelerators(app: &AppHandle, editing: bool) {
+    let Some(menu) = app.menu() else { return };
+    for (id, accelerator) in EDITING_ACCELERATORS {
+        let Some(MenuItemKind::MenuItem(item)) = find_menu_item(&menu, id) else {
+            continue;
+        };
+        let _ = item.set_accelerator(if editing { None } else { Some(*accelerator) });
+    }
+}
+
+/// Depth-first lookup: `Menu::get` only inspects direct children, while the
+/// editing commands live inside the Edit submenu.
+fn find_menu_item(menu: &Menu<Wry>, id: &str) -> Option<MenuItemKind<Wry>> {
+    fn walk(items: Vec<MenuItemKind<Wry>>, id: &str) -> Option<MenuItemKind<Wry>> {
+        for item in items {
+            if item.id().0 == id {
+                return Some(item);
+            }
+            if let MenuItemKind::Submenu(submenu) = &item {
+                if let Ok(children) = submenu.items() {
+                    if let Some(found) = walk(children, id) {
+                        return Some(found);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    menu.items().ok().and_then(|items| walk(items, id))
+}
 
 fn is_zh(language: &str) -> bool {
     language.to_lowercase().starts_with("zh")

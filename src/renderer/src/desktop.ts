@@ -217,6 +217,17 @@ export function markReady(): void {
   void invoke('app_ready').catch(() => undefined)
 }
 
+/**
+ * Hand ⌘C/⌘V/⌘X/⌘Z/⌘A back to the WebView while a text field is focused.
+ *
+ * macOS matches the native menu accelerators before the key reaches the
+ * webview, so the Edit menu briefly gives up its shortcuts while editing text.
+ */
+export function setEditingShortcuts(editing: boolean): void {
+  if (!isTauri()) return
+  void invoke('set_editing_shortcuts', { editing }).catch(() => undefined)
+}
+
 if (isTauri()) {
   window.desktop = createApi()
 }
