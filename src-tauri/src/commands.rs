@@ -340,12 +340,6 @@ pub fn set_menu_language(app: AppHandle, language: String) -> Result<(), String>
     menu::set_language(&app, &language)
 }
 
-/// Let the webview own ⌘C/⌘V/⌘X/⌘Z/⌘A while a text field is focused.
-#[tauri::command]
-pub fn set_editing_shortcuts(app: AppHandle, editing: bool) {
-    menu::set_editing_accelerators(&app, editing);
-}
-
 #[tauri::command]
 pub fn new_window(app: AppHandle) -> Result<(), String> {
     window::create_window(&app, vec![], vec![])
@@ -491,6 +485,31 @@ pub async fn read_clipboard_image() -> Result<Option<String>, String> {
             .map_err(|err| format!("无法编码剪贴板图像：{err}"))?;
         let encoded = B64.encode(cursor.into_inner());
         Ok(Some(format!("data:image/png;base64,{encoded}")))
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+/// Read plain text from the system clipboard (used when pasting into inputs,
+/// where macOS hands the shortcut to the native menu instead of the webview).
+#[tauri::command]
+pub async fn read_clipboard_text() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<Option<String>, String> {
+        match arboard::Clipboard::new() {
+            Ok(mut clipboard) => Ok(clipboard.get_text().ok()),
+            Err(_) => Ok(None),
+        }
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+/// Write plain text to the system clipboard.
+#[tauri::command]
+pub async fn write_clipboard_text(text: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let mut clipboard = arboard::Clipboard::new().map_err(|err| err.to_string())?;
+        clipboard.set_text(text).map_err(|err| err.to_string())
     })
     .await
     .map_err(|err| err.to_string())?
