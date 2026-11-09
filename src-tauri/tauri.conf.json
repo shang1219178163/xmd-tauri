@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "xmd",
+  "version": "1.0.0",
+  "identifier": "app.xmd.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Offline mind mapping",
+    "longDescription": "A complete offline mind-mapping desktop app. No account, no subscription, no cloud sync.",
+    "copyright": "Copyright © 2026 xmd",
+    "fileAssociations": [
+      {
+        "ext": ["xmind"],
+        "name": "Xmind Workbook",
+        "description": "Xmind mind map workbook",
+        "mimeType": "application/x-xmind",
+        "role": "Editor"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}
