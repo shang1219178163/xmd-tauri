@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-09 18:30
+
+### 修复：对话框输入框无法粘贴剪贴板文本
+
+- 现象：插入超链接（以及标签、备注等所有文本输入）时，`⌘V` 无法把剪贴板字符串粘进输入框。
+- 原因：`src-tauri/src/menu.rs` 给「撤销/重做/剪切/复制/粘贴/全选」绑定了原生加速键，macOS 会在按键送达 WebView 之前匹配菜单项，因此 `useKeyboard` 里 `isTextField` 的放行分支从未生效，`⌘V` 一律执行了「粘贴主题」。
+- 修复：新增 `set_editing_shortcuts` 命令与 `menu::set_editing_accelerators`，文本输入获得焦点时临时摘除这 6 个菜单加速键，失焦后按原值恢复；`useKeyboard` 用 `focusin` / `focusout` 同步状态，切换输入框时只在状态变化时调用一次。
+- 菜单项仍可点击执行画布操作，快捷键提示保持不变；`Menu::get` 不递归子菜单，查找改为深度优先。
+- `tsc --noEmit`、`cargo check`、214 项单元测试全部通过。
+
 ## 2026-11-09 17:22
 
 ### 验证：v1.0.0 由 GitHub Actions 自动构建并发布

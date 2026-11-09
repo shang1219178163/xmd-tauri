@@ -340,6 +340,12 @@ pub fn set_menu_language(app: AppHandle, language: String) -> Result<(), String>
     menu::set_language(&app, &language)
 }
 
+/// Let the webview own ⌘C/⌘V/⌘X/⌘Z/⌘A while a text field is focused.
+#[tauri::command]
+pub fn set_editing_shortcuts(app: AppHandle, editing: bool) {
+    menu::set_editing_accelerators(&app, editing);
+}
+
 #[tauri::command]
 pub fn new_window(app: AppHandle) -> Result<(), String> {
     window::create_window(&app, vec![], vec![])
