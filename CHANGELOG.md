@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-09 17:22
+
+### 验证：v1.0.0 由 GitHub Actions 自动构建并发布
+
+- 工作流 `Release` 全绿：`macOS · Apple Silicon` 5m40s、`macOS · Intel` 13m23s，均包含 `npm test` 与 `tauri build`。
+- Release：https://github.com/shang1219178163/xmd-tauri/releases/tag/v1.0.0
+- 上传产物：`xmd_1.0.0_aarch64.dmg`、`xmd_1.0.0_x64.dmg`，以及 tauri-action 附带的 `xmd_{aarch64,x64}.app.tar.gz` 更新包。
+- 分支状态：`develop` 为默认分支，`main` 为 `v1.0.0` 发布基线，本地与远端一致。
+
 ## 2026-11-09 17:08
 
 ### 修复：CI 缺少 package-lock.json 与 .gitignore，并升级 Actions 版本
