@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-09 16:24
+
+### 仓库：链接到 GitHub
+
+- 本地初始化 git 仓库（`main` 分支），首次提交 179 个文件、2.5 MB；`node_modules`、`dist`、`src-tauri/target`、`src-tauri/gen` 均按 `.gitignore` 排除。
+- 创建公开仓库 `shang1219178163/xmd-tauri`，远程 `origin` 使用 SSH，`main` 已跟踪 `origin/main`。
+- 提交前做过密钥扫描，命中项均为代码里的 `token`（文本换行）变量，无敏感信息。
+
 ## 2026-11-09 16:18
 
 ### 构建：重新打包发布包（未清理缓存）
