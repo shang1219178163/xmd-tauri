@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-09 16:41
+
+### 新增：Gitflow 分支模型与 tag 自动发布
+
+- 新增 `develop` 作为默认集成分支，`main` 只保留已发布版本；README 增加 Gitflow 分支表与常用命令。
+- 新增 `.github/workflows/release.yml`：推送 `v*.*.*` tag 触发，校验格式后把版本号同步到 `package.json` 与 `src-tauri/tauri.conf.json`。
+- 在 `macos-14` 上并行构建 Apple Silicon（`aarch64-apple-darwin`）与 Intel（`x86_64-apple-darwin`，交叉编译）两个 DMG，先跑 `npm test`，通过后由 `tauri-apps/tauri-action@v0` 创建 GitHub Release 并上传产物。
+- 产物未签名；工作流只接受 `vX.Y.Z`，预发布后缀会在校验步骤失败。
+
 ## 2026-11-09 16:24
 
 ### 仓库：链接到 GitHub
