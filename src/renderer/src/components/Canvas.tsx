@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Boundary, LayoutNode, Point, Relationship, Summary, Topic } from '@shared/types'
 import { rainbowPalette } from '@shared/defaults'
 import { layoutSheet, measureTopic } from '../layout'
+import { LINK_TEXT_INSET } from '../layout/measure'
 import { layoutSettingsOf } from '../layout/settings'
 import { useMapStore } from '../store/mapStore'
 import { useUiStore } from '../store/uiStore'
@@ -1069,7 +1070,8 @@ export default function Canvas() {
             const imageHeight = hasImage ? Math.min(72, h - 34) : 0
             const textTop = node.y + (hasImage ? imageHeight + 6 : 0)
             const textAreaHeight = h - (hasImage ? imageHeight + 6 : 0) - (labels.length ? 15 : 0)
-            const maxTextWidth = Math.max(24, w - pad * 2)
+            const linkInset = node.topic.hyperlink ? LINK_TEXT_INSET : pad
+            const maxTextWidth = Math.max(24, w - pad - linkInset)
             const lineHeight = style.fontSize * 1.35
             const lines = wrapText(node.topic.title || ' ', maxTextWidth, style.fontSize)
             const maxLines = Math.max(1, Math.floor((textAreaHeight - 4) / lineHeight))
@@ -1077,7 +1079,12 @@ export default function Canvas() {
             const totalTextHeight = visible.length * lineHeight
             const startY = textTop + Math.max(6, (textAreaHeight - totalTextHeight) / 2) + style.fontSize
             const textAnchor = style.textAlign === 'left' ? 'start' : style.textAlign === 'right' ? 'end' : 'middle'
-            const textX = style.textAlign === 'left' ? node.x + pad : style.textAlign === 'right' ? node.x + w - pad : node.x + w / 2
+            const textX =
+              style.textAlign === 'left'
+                ? node.x + pad
+                : style.textAlign === 'right'
+                  ? node.x + w - linkInset
+                  : node.x + (pad + w - linkInset) / 2
             const shapeFill = fillFor(style)
             const rough = style.handDrawn || settings.handDrawnMode || sheet.settings?.handDrawn === true
             return (
