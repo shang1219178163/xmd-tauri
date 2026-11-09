@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Boundary, LayoutNode, Point, Relationship, Summary, Topic } from '@shared/types'
 import { rainbowPalette } from '@shared/defaults'
 import { layoutSheet, measureTopic } from '../layout'
+import { LINK_TEXT_INSET } from '../layout/measure'
 import { layoutSettingsOf } from '../layout/settings'
 import { useMapStore } from '../store/mapStore'
 import { useUiStore } from '../store/uiStore'
@@ -27,6 +28,7 @@ import {
 } from '../model/style'
 import { braceVerticalPath, edgeToPath } from '../model/edge-path'
 import { markerById } from '../data/markers'
+import { openExternal } from '../desktop'
 
 interface Interaction {
   mode: 'none' | 'pan' | 'drag' | 'marquee'
@@ -1068,7 +1070,8 @@ export default function Canvas() {
             const imageHeight = hasImage ? Math.min(72, h - 34) : 0
             const textTop = node.y + (hasImage ? imageHeight + 6 : 0)
             const textAreaHeight = h - (hasImage ? imageHeight + 6 : 0) - (labels.length ? 15 : 0)
-            const maxTextWidth = Math.max(24, w - pad * 2)
+            const linkInset = node.topic.hyperlink ? LINK_TEXT_INSET : pad
+            const maxTextWidth = Math.max(24, w - pad - linkInset)
             const lineHeight = style.fontSize * 1.35
             const lines = wrapText(node.topic.title || ' ', maxTextWidth, style.fontSize)
             const maxLines = Math.max(1, Math.floor((textAreaHeight - 4) / lineHeight))
@@ -1076,7 +1079,12 @@ export default function Canvas() {
             const totalTextHeight = visible.length * lineHeight
             const startY = textTop + Math.max(6, (textAreaHeight - totalTextHeight) / 2) + style.fontSize
             const textAnchor = style.textAlign === 'left' ? 'start' : style.textAlign === 'right' ? 'end' : 'middle'
-            const textX = style.textAlign === 'left' ? node.x + pad : style.textAlign === 'right' ? node.x + w - pad : node.x + w / 2
+            const textX =
+              style.textAlign === 'left'
+                ? node.x + pad
+                : style.textAlign === 'right'
+                  ? node.x + w - linkInset
+                  : node.x + (pad + w - linkInset) / 2
             const shapeFill = fillFor(style)
             const rough = style.handDrawn || settings.handDrawnMode || sheet.settings?.handDrawn === true
             return (
@@ -1178,19 +1186,29 @@ export default function Canvas() {
                 ) : null}
 
                 {node.topic.notes?.plain?.content ? (
-                  <text className="topic-note-icon" x={node.x + w - 12} y={node.y + 12} fontSize={10} textAnchor="middle">
+                  <text
+                    className="topic-note-icon"
+                    x={node.x + w - (node.topic.hyperlink ? 32 : 12)}
+                    y={node.y + 12}
+                    fontSize={10}
+                    textAnchor="middle"
+                  >
                     ✎
                   </text>
                 ) : null}
 
                 {node.topic.hyperlink ? (
-                  <text className="topic-link-icon" x={node.x + w - 12} y={node.y + h - 6} fontSize={9} textAnchor="middle">
-                    ↗
-                  </text>
+                  <LinkBadge href={node.topic.hyperlink} x={node.x + w - 21} y={node.y + h / 2 - 6.6} color={style.color} />
                 ) : null}
 
                 {(node.topic.attachments?.length ?? 0) > 0 ? (
-                  <text className="topic-attach-icon" x={node.x + w - 24} y={node.y + h - 6} fontSize={9} textAnchor="middle">
+                  <text
+                    className="topic-attach-icon"
+                    x={node.x + w - (node.topic.hyperlink ? 38 : 24)}
+                    y={node.y + h - 6}
+                    fontSize={9}
+                    textAnchor="middle"
+                  >
                     ⧉
                   </text>
                 ) : null}
@@ -1316,7 +1334,8 @@ export default function Canvas() {
             minHeight: Math.max(editorRect.height, 38),
             fontSize: Math.max(11, editingStyle.fontSize * viewport.zoom),
             lineHeight: 1.35,
-            color: editingStyle.color === '#ffffff' ? '#1f2937' : editingStyle.color
+            background: editingStyle.fill,
+            color: editingStyle.color
           }}
           value={editingDraft}
           onChange={(event) => useMapStore.getState().updateEditDraft(event.target.value)}
@@ -1466,5 +1485,30 @@ function ContextMenu({
         </>
       )}
     </div>
+  )
+}
+
+/** 主题最右侧的超链接图标：点击用系统默认程序打开。 */
+function LinkBadge({ href, x, y, color }: { href: string; x: number; y: number; color: string }) {
+  return (
+    <g
+      className="topic-link-icon"
+      transform={`translate(${x} ${y})`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        void openExternal(href).then((ok) => {
+          if (!ok) useUiStore.getState().toast('无法打开链接', 'error')
+        })
+      }}
+    >
+      <title>{href}</title>
+      <circle className="topic-link-hit" cx={6.6} cy={6.6} r={11} />
+      <g className="topic-link-glyph" transform="scale(0.55)" stroke={color} strokeWidth={2.4}>
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </g>
+    </g>
   )
 }

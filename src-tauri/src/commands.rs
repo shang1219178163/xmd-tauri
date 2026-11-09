@@ -464,6 +464,43 @@ pub fn show_item_in_folder(app: AppHandle, path: String) -> Result<(), String> {
         .map_err(|err| err.to_string())
 }
 
+/// Open a hyperlink, mail address or local path with the system default app.
+#[tauri::command]
+pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
+    let target = target.trim();
+    if target.is_empty() {
+        return Err("链接为空".to_string());
+    }
+
+    if target.contains("://") || target.starts_with("mailto:") {
+        return app
+            .opener()
+            .open_url(target.to_string(), None::<&str>)
+            .map_err(|err| err.to_string());
+    }
+
+    if let Some(rest) = target.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return app
+                .opener()
+                .open_path(format!("{home}/{rest}"), None::<&str>)
+                .map_err(|err| err.to_string());
+        }
+    }
+
+    if Path::new(target).is_absolute() {
+        return app
+            .opener()
+            .open_path(target.to_string(), None::<&str>)
+            .map_err(|err| err.to_string());
+    }
+
+    // 裸域名按网页处理。
+    app.opener()
+        .open_url(format!("https://{target}"), None::<&str>)
+        .map_err(|err| err.to_string())
+}
+
 #[tauri::command]
 pub async fn read_clipboard_image() -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(|| -> Result<Option<String>, String> {
