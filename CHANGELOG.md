@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-09 19:10
+
+### 修复（第二次，实机验证通过）：输入框粘贴剪贴板文本
+
+- 上一版「输入框获得焦点时摘除菜单加速键」的方案**无效**：muda 的 `set_accelerator` 在参数为 `None` 时直接跳过，不会清除已设快捷键（`muda-0.20.0/src/platform_impl/macos/mod.rs:320`）。
+- 改为**保留菜单加速键，由菜单事件按焦点分流**：`⌘C/⌘V/⌘X/⌘A/⌘Z` 仍先被菜单拦截，随后在渲染层判断 `document.activeElement` 是否为输入框，是则执行文本操作，否则才落到画布动作。
+- 新增 Rust 命令 `read_clipboard_text` / `write_clipboard_text`（arboard），用于读写系统剪贴板纯文本。
+- 新增 `src/renderer/src/editing.ts`：输入框 / 文本域的复制、剪切、粘贴、全选、撤销、重做；文本域通过 `setRangeText` + `input` 事件保持 React 受控组件同步。
+- 删除上一版无效的快捷键摘除代码（`menu.rs` / `commands.rs` / `desktop.ts` / `useKeyboard.ts`）。
+- 新增 `editing.test.ts` 5 项用例；单元测试总数 219，全部通过。实机确认超链接输入框 `⌘V` 可粘贴。
+
 ## 2026-11-09 18:30
 
 ### 修复：对话框输入框无法粘贴剪贴板文本
@@ -9,6 +20,8 @@
 - 修复：新增 `set_editing_shortcuts` 命令与 `menu::set_editing_accelerators`，文本输入获得焦点时临时摘除这 6 个菜单加速键，失焦后按原值恢复；`useKeyboard` 用 `focusin` / `focusout` 同步状态，切换输入框时只在状态变化时调用一次。
 - 菜单项仍可点击执行画布操作，快捷键提示保持不变；`Menu::get` 不递归子菜单，查找改为深度优先。
 - `tsc --noEmit`、`cargo check`、214 项单元测试全部通过。
+
+> ⚠️ 本方案实机验证无效（muda 无法清除已设加速键），已由 19:10 条目取代。
 
 ## 2026-11-09 17:22
 

@@ -1,5 +1,6 @@
 import { useMapStore } from './store/mapStore'
 import { useUiStore } from './store/uiStore'
+import { runTextCommand } from './editing'
 
 export type FileAction =
   | 'new-map'
@@ -57,6 +58,9 @@ export function runAction(action: string): void {
     dispatchFileAction(action as FileAction)
     return
   }
+
+  // 输入框有焦点时，⌘C/⌘V/⌘X/⌘A/⌘Z 作用于文本而不是画布。
+  if (runTextCommand(action)) return
 
   switch (action) {
     case 'undo':

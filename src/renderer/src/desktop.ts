@@ -217,15 +217,20 @@ export function markReady(): void {
   void invoke('app_ready').catch(() => undefined)
 }
 
-/**
- * Hand ⌘C/⌘V/⌘X/⌘Z/⌘A back to the WebView while a text field is focused.
- *
- * macOS matches the native menu accelerators before the key reaches the
- * webview, so the Edit menu briefly gives up its shortcuts while editing text.
- */
-export function setEditingShortcuts(editing: boolean): void {
+/** Read plain text from the system clipboard (empty string when unavailable). */
+export async function readClipboardText(): Promise<string> {
+  if (!isTauri()) return ''
+  try {
+    return (await invoke<string | null>('read_clipboard_text')) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** Write plain text to the system clipboard. */
+export async function writeClipboardText(text: string): Promise<void> {
   if (!isTauri()) return
-  void invoke('set_editing_shortcuts', { editing }).catch(() => undefined)
+  await invoke('write_clipboard_text', { text }).catch(() => undefined)
 }
 
 if (isTauri()) {
