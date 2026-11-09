@@ -1334,7 +1334,8 @@ export default function Canvas() {
             minHeight: Math.max(editorRect.height, 38),
             fontSize: Math.max(11, editingStyle.fontSize * viewport.zoom),
             lineHeight: 1.35,
-            color: editingStyle.color === '#ffffff' ? '#1f2937' : editingStyle.color
+            background: editingStyle.fill,
+            color: editingStyle.color
           }}
           value={editingDraft}
           onChange={(event) => useMapStore.getState().updateEditDraft(event.target.value)}
