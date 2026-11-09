@@ -874,6 +874,8 @@ export default function Canvas() {
     }
   }
 
+  const editorShape = editingNode && editingStyle ? topicShape(editingStyle, editingNode.width, editingNode.height) : undefined
+
   const editorRect = editingNode
     ? {
         left: screenOf({ x: editingNode.x, y: editingNode.y }).x,
@@ -1335,7 +1337,8 @@ export default function Canvas() {
             fontSize: Math.max(11, editingStyle.fontSize * viewport.zoom),
             lineHeight: 1.35,
             background: editingStyle.fill,
-            color: editingStyle.color
+            color: editingStyle.color,
+            borderRadius: editorShape && 'rx' in editorShape && typeof editorShape.rx === 'number' ? editorShape.rx * viewport.zoom : 4,
           }}
           value={editingDraft}
           onChange={(event) => useMapStore.getState().updateEditDraft(event.target.value)}
