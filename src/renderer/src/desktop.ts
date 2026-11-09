@@ -233,6 +233,17 @@ export async function writeClipboardText(text: string): Promise<void> {
   await invoke('write_clipboard_text', { text }).catch(() => undefined)
 }
 
+/** Open a link, mail address or local path with the system default app. */
+export async function openExternal(target: string): Promise<boolean> {
+  if (!isTauri()) return false
+  try {
+    await invoke('open_external', { target })
+    return true
+  } catch {
+    return false
+  }
+}
+
 if (isTauri()) {
   window.desktop = createApi()
 }

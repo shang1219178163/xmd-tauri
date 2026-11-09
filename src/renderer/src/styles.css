@@ -511,11 +511,28 @@ button {
   pointer-events: none;
 }
 
-.topic-link-icon,
 .topic-note-icon,
 .topic-attach-icon {
   color: var(--ink-soft);
   pointer-events: none;
+}
+
+.topic-link-icon {
+  cursor: pointer;
+}
+
+.topic-link-icon .topic-link-hit {
+  fill: transparent;
+}
+
+.topic-link-icon .topic-link-glyph {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topic-link-icon:hover .topic-link-glyph {
+  opacity: 0.6;
 }
 
 .topic-collapse {

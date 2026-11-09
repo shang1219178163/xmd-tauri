@@ -27,6 +27,7 @@ import {
 } from '../model/style'
 import { braceVerticalPath, edgeToPath } from '../model/edge-path'
 import { markerById } from '../data/markers'
+import { openExternal } from '../desktop'
 
 interface Interaction {
   mode: 'none' | 'pan' | 'drag' | 'marquee'
@@ -1178,19 +1179,29 @@ export default function Canvas() {
                 ) : null}
 
                 {node.topic.notes?.plain?.content ? (
-                  <text className="topic-note-icon" x={node.x + w - 12} y={node.y + 12} fontSize={10} textAnchor="middle">
+                  <text
+                    className="topic-note-icon"
+                    x={node.x + w - (node.topic.hyperlink ? 32 : 12)}
+                    y={node.y + 12}
+                    fontSize={10}
+                    textAnchor="middle"
+                  >
                     ✎
                   </text>
                 ) : null}
 
                 {node.topic.hyperlink ? (
-                  <text className="topic-link-icon" x={node.x + w - 12} y={node.y + h - 6} fontSize={9} textAnchor="middle">
-                    ↗
-                  </text>
+                  <LinkBadge href={node.topic.hyperlink} x={node.x + w - 21} y={node.y + h / 2 - 6.6} color={style.color} />
                 ) : null}
 
                 {(node.topic.attachments?.length ?? 0) > 0 ? (
-                  <text className="topic-attach-icon" x={node.x + w - 24} y={node.y + h - 6} fontSize={9} textAnchor="middle">
+                  <text
+                    className="topic-attach-icon"
+                    x={node.x + w - (node.topic.hyperlink ? 38 : 24)}
+                    y={node.y + h - 6}
+                    fontSize={9}
+                    textAnchor="middle"
+                  >
                     ⧉
                   </text>
                 ) : null}
@@ -1466,5 +1477,30 @@ function ContextMenu({
         </>
       )}
     </div>
+  )
+}
+
+/** 主题最右侧的超链接图标：点击用系统默认程序打开。 */
+function LinkBadge({ href, x, y, color }: { href: string; x: number; y: number; color: string }) {
+  return (
+    <g
+      className="topic-link-icon"
+      transform={`translate(${x} ${y})`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        void openExternal(href).then((ok) => {
+          if (!ok) useUiStore.getState().toast('无法打开链接', 'error')
+        })
+      }}
+    >
+      <title>{href}</title>
+      <circle className="topic-link-hit" cx={6.6} cy={6.6} r={11} />
+      <g className="topic-link-glyph" transform="scale(0.55)" stroke={color} strokeWidth={2.4}>
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </g>
+    </g>
   )
 }

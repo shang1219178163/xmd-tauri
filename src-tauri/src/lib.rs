@@ -58,6 +58,7 @@ pub fn run() {
             commands::app_info,
             commands::list_font_families,
             commands::show_item_in_folder,
+            commands::open_external,
             commands::read_clipboard_image,
             commands::set_dirty,
             commands::confirm_close,
