@@ -77,7 +77,7 @@ git switch develop && git merge --no-ff release/1.1.0 && git push
 推送形如 `v1.2.3` 的 tag 会触发 `.github/workflows/release.yml`：
 
 1. 校验 tag 格式，并把版本号同步进 `package.json` 与 `src-tauri/tauri.conf.json`；
-2. 在 `macos-14` 上分别构建 **Apple Silicon（aarch64）** 与 **Intel（x86_64）** 两个 DMG；
+2. 在 `macos-15`（Apple Silicon）与 `macos-15-intel`（Intel）上分别构建两个 DMG；
 3. 运行 `npm test`，通过后由 `tauri-action` 创建 GitHub Release 并上传两个 DMG。
 
 构建产物未签名，首次打开需右键 → 打开。工作流只接受 `vX.Y.Z`，预发布版本（如 `v1.2.3-rc.1`）会因格式校验失败。

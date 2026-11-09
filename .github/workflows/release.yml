@@ -23,10 +23,10 @@ jobs:
         include:
           - label: Apple Silicon
             target: aarch64-apple-darwin
-            runner: macos-14
+            runner: macos-15
           - label: Intel
             target: x86_64-apple-darwin
-            runner: macos-14 # Apple Silicon runner 上交叉编译 x86_64，无需 Intel runner
+            runner: macos-15-intel
     steps:
       - name: 校验 tag 格式
         run: |
