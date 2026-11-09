@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-09 17:08
+
+### 修复：CI 缺少 package-lock.json 与 .gitignore，并升级 Actions 版本
+
+- 第二次 tag 构建在 `actions/setup-node` 步骤失败：`Dependencies lock file is not found`。
+- 根因是 `~/.gitignore_global` 第 5、6 行分别忽略了 `package-lock.json` 与 `.gitignore`，两者从未进入仓库。
+- `.gitignore` 内新增 `!.gitignore`、`!package-lock.json`（仓库级规则优先级高于全局），并补交这两个文件。
+- `actions/checkout`、`actions/setup-node` 由 v4 升到 v5，避免 Node 20 弃用告警。
+
 ## 2026-11-09 17:07
 
 ### 修复：Release 工作流 runner 不可用导致 v1.0.0 构建被取消

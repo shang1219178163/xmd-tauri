@@ -35,7 +35,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 同步版本号到 package.json 与 tauri.conf.json
         shell: bash
@@ -51,7 +51,7 @@ jobs:
             console.log("version ->", process.env.VERSION);
           '
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

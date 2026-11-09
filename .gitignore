@@ -1,0 +1,10 @@
+node_modules
+dist
+src-tauri/target
+src-tauri/gen
+.DS_Store
+*.log
+
+# 全局 ~/.gitignore_global 默认忽略这两项，仓库内需要显式取消忽略
+!.gitignore
+!package-lock.json
