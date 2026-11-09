@@ -48,6 +48,40 @@ npm run package:universal  # 通用二进制（需先安装 aarch64 目标）
 
 > 首次在另一台 Mac 上运行未签名应用时，请右键 → 打开。构建需要 Rust 工具链（`rustup`）与 Xcode Command Line Tools。
 
+## 分支模型（Gitflow）
+
+| 分支 | 来源 | 合入 | 用途 |
+| --- | --- | --- | --- |
+| `main` | — | — | 只保存已发布版本，每次合并后打 `vX.Y.Z` tag |
+| `develop` | `main` | — | 日常集成分支，仓库默认分支 |
+| `feature/<name>` | `develop` | `develop` | 单个功能开发 |
+| `release/<version>` | `develop` | `main` + `develop` | 发布准备：定版本、修 bug、更新 CHANGELOG |
+| `hotfix/<version>` | `main` | `main` + `develop` | 线上紧急修复 |
+
+常用命令：
+
+```bash
+git switch develop && git pull
+git switch -c feature/xxx          # 开发功能
+git switch develop && git merge --no-ff feature/xxx && git push
+
+git switch -c release/1.1.0 develop # 准备发布
+# 改版本号、CHANGELOG，测完后：
+git switch main && git merge --no-ff release/1.1.0
+git tag -a v1.1.0 -m "xmd 1.1.0" && git push origin main --tags
+git switch develop && git merge --no-ff release/1.1.0 && git push
+```
+
+## 自动发布
+
+推送形如 `v1.2.3` 的 tag 会触发 `.github/workflows/release.yml`：
+
+1. 校验 tag 格式，并把版本号同步进 `package.json` 与 `src-tauri/tauri.conf.json`；
+2. 在 `macos-14` 上分别构建 **Apple Silicon（aarch64）** 与 **Intel（x86_64）** 两个 DMG；
+3. 运行 `npm test`，通过后由 `tauri-action` 创建 GitHub Release 并上传两个 DMG。
+
+构建产物未签名，首次打开需右键 → 打开。工作流只接受 `vX.Y.Z`，预发布版本（如 `v1.2.3-rc.1`）会因格式校验失败。
+
 ## 快捷键
 
 | 操作 | 快捷键 |
