@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-09 17:07
+
+### 修复：Release 工作流 runner 不可用导致 v1.0.0 构建被取消
+
+- 首次推送 `v1.0.0` 后两个 job 均在 2 秒内 `cancelled`，报错 `The configuration 'macos-14-arm64-us-default' is not supported`。
+- 原因：GitHub 已退役 `macos-14` 托管 runner，当前仅提供 `macos-26` / `macos-15` 及其 `-intel` 变体。
+- 矩阵改为 Apple Silicon → `macos-15`、Intel → `macos-15-intel`，两者均为原生架构，无需交叉编译；README 同步更新。
+- `v1.0.0` tag 尚未产生任何 Release，直接在修复后的 `main` 上重新打 tag 验证。
+
 ## 2026-11-09 16:41
 
 ### 新增：Gitflow 分支模型与 tag 自动发布
