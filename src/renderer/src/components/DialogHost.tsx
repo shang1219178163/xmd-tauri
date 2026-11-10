@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileImage, FileText, FileType2, ImagePlus, Paperclip, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { ExternalLink, FileImage, FileText, FileType2, ImagePlus, Paperclip, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import type { AttachmentRef, RecentFile } from '@shared/types'
 import { TEMPLATES, type TemplateDef } from '../data/templates'
 import { SHORTCUTS } from '../data/shortcuts'
@@ -8,7 +8,14 @@ import { useMapStore } from '../store/mapStore'
 import { useUiStore } from '../store/uiStore'
 import { runOrConfirm } from '../store/guard'
 import AppLogo from './AppLogo'
-import { addAttachmentFromDisk, insertImageFromClipboard, insertImageFromDisk, openWorkbookPath, saveCurrentWorkbook } from '../hooks/useFileOps'
+import {
+  addAttachmentFromDisk,
+  insertImageFromClipboard,
+  insertImageFromDisk,
+  openAttachment,
+  openWorkbookPath,
+  saveCurrentWorkbook
+} from '../hooks/useFileOps'
 
 function Dialog({
   title,
@@ -263,6 +270,17 @@ function AttachmentDialog({ onClose }: { onClose: () => void }) {
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.path}>
               {item.name}
             </span>
+            <button
+              className="icon-btn"
+              title="打开"
+              onClick={() => {
+                void openAttachment(item).then((ok) => {
+                  if (!ok) useUiStore.getState().toast('无法打开附件', 'error')
+                })
+              }}
+            >
+              <ExternalLink size={13} />
+            </button>
             <button
               className="icon-btn"
               title="移除"

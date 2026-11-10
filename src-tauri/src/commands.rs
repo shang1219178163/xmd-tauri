@@ -99,15 +99,25 @@ fn body_text(request: &Request<'_>) -> Result<String, String> {
     String::from_utf8(body_bytes(request)?).map_err(|err| format!("文本编码错误：{err}"))
 }
 
+/// macOS 把过滤器里的 `*` 当成字面扩展名，会让所有文件都不可选。
+/// 只要出现通配符就不加过滤器，交给系统显示全部文件。
+fn has_wildcard(filters: &[DialogFilter]) -> bool {
+    filters
+        .iter()
+        .any(|filter| filter.extensions.iter().any(|ext| ext == "*"))
+}
+
 fn save_dialog(
     app: &AppHandle,
     default_name: &str,
     filters: &[DialogFilter],
 ) -> Option<PathBuf> {
     let mut dialog = app.dialog().file().set_file_name(default_name);
-    for filter in filters {
-        let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
-        dialog = dialog.add_filter(&filter.name, &extensions);
+    if !has_wildcard(filters) {
+        for filter in filters {
+            let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
+            dialog = dialog.add_filter(&filter.name, &extensions);
+        }
     }
     dialog.blocking_save_file()?.into_path().ok()
 }
@@ -127,7 +137,6 @@ pub async fn dialog_open_workbook(app: AppHandle) -> Result<DialogResult, String
         .file()
         .set_title("打开 Xmind 文件")
         .add_filter("Xmind Workbook", &["xmind"])
-        .add_filter("All Files", &["*"])
         .blocking_pick_file();
     let Some(file) = picked else {
         return Ok(DialogResult::canceled());
@@ -143,9 +152,11 @@ pub async fn dialog_pick_file(
     filters: Vec<DialogFilter>,
 ) -> Result<DialogResult, String> {
     let mut dialog = app.dialog().file();
-    for filter in &filters {
-        let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
-        dialog = dialog.add_filter(&filter.name, &extensions);
+    if !has_wildcard(&filters) {
+        for filter in &filters {
+            let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
+            dialog = dialog.add_filter(&filter.name, &extensions);
+        }
     }
     let Some(file) = dialog.blocking_pick_file() else {
         return Ok(DialogResult::canceled());
@@ -464,6 +475,63 @@ pub fn show_item_in_folder(app: AppHandle, path: String) -> Result<(), String> {
         .map_err(|err| err.to_string())
 }
 
+/// Open a hyperlink, mail address or local path with the system default app.
+#[tauri::command]
+pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
+    let target = target.trim();
+    if target.is_empty() {
+        return Err("链接为空".to_string());
+    }
+
+    if target.contains("://") || target.starts_with("mailto:") {
+        return app
+            .opener()
+            .open_url(target.to_string(), None::<&str>)
+            .map_err(|err| err.to_string());
+    }
+
+    let path = expand_home(target);
+    if path.is_absolute() {
+        return open_local(&app, path);
+    }
+
+    // 裸域名按网页处理。
+    app.opener()
+        .open_url(format!("https://{target}"), None::<&str>)
+        .map_err(|err| err.to_string())
+}
+
+/// 展开 `~/` 前缀；其余原样返回。
+fn expand_home(target: &str) -> PathBuf {
+    if let Some(rest) = target.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return Path::new(&home).join(rest);
+        }
+    }
+    PathBuf::from(target)
+}
+
+/// 打开本地文件或目录；文件打不开（不存在、没有默认程序）时退回到所在目录。
+fn open_local(app: &AppHandle, path: PathBuf) -> Result<(), String> {
+    let shown = path.to_string_lossy().to_string();
+    if app.opener().open_path(shown, None::<&str>).is_ok() {
+        return Ok(());
+    }
+
+    let dir = if path.is_dir() {
+        path
+    } else {
+        match path.parent() {
+            Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
+            _ => return Err(format!("无法打开 {}，也找不到所在目录", path.display())),
+        }
+    };
+
+    app.opener()
+        .open_path(dir.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|err| err.to_string())
+}
+
 #[tauri::command]
 pub async fn read_clipboard_image() -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(|| -> Result<Option<String>, String> {
@@ -485,6 +553,31 @@ pub async fn read_clipboard_image() -> Result<Option<String>, String> {
             .map_err(|err| format!("无法编码剪贴板图像：{err}"))?;
         let encoded = B64.encode(cursor.into_inner());
         Ok(Some(format!("data:image/png;base64,{encoded}")))
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+/// Read plain text from the system clipboard (used when pasting into inputs,
+/// where macOS hands the shortcut to the native menu instead of the webview).
+#[tauri::command]
+pub async fn read_clipboard_text() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<Option<String>, String> {
+        match arboard::Clipboard::new() {
+            Ok(mut clipboard) => Ok(clipboard.get_text().ok()),
+            Err(_) => Ok(None),
+        }
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+/// Write plain text to the system clipboard.
+#[tauri::command]
+pub async fn write_clipboard_text(text: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let mut clipboard = arboard::Clipboard::new().map_err(|err| err.to_string())?;
+        clipboard.set_text(text).map_err(|err| err.to_string())
     })
     .await
     .map_err(|err| err.to_string())?

@@ -511,11 +511,40 @@ button {
   pointer-events: none;
 }
 
-.topic-link-icon,
-.topic-note-icon,
-.topic-attach-icon {
+.topic-note-icon {
   color: var(--ink-soft);
   pointer-events: none;
+}
+
+.topic-attach-icon {
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.topic-attach-icon .topic-attach-hit {
+  fill: transparent;
+}
+
+.topic-attach-icon:hover {
+  color: var(--accent);
+}
+
+.topic-link-icon {
+  cursor: pointer;
+}
+
+.topic-link-icon .topic-link-hit {
+  fill: transparent;
+}
+
+.topic-link-icon .topic-link-glyph {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topic-link-icon:hover .topic-link-glyph {
+  opacity: 0.6;
 }
 
 .topic-collapse {
@@ -552,7 +581,7 @@ button {
   z-index: 30;
   border: none;
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 0;
   border-radius: 4px;
   background: var(--bg-panel);
   color: var(--ink);

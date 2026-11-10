@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Boundary, LayoutNode, Point, Relationship, Summary, Topic } from '@shared/types'
 import { rainbowPalette } from '@shared/defaults'
 import { layoutSheet, measureTopic } from '../layout'
+import { rightTextInset } from '../layout/measure'
 import { layoutSettingsOf } from '../layout/settings'
 import { useMapStore } from '../store/mapStore'
 import { useUiStore } from '../store/uiStore'
@@ -27,6 +28,8 @@ import {
 } from '../model/style'
 import { braceVerticalPath, edgeToPath } from '../model/edge-path'
 import { markerById } from '../data/markers'
+import { directAttachmentPath } from '../model/attachment'
+import { openExternal } from '../desktop'
 
 interface Interaction {
   mode: 'none' | 'pan' | 'drag' | 'marquee'
@@ -872,6 +875,8 @@ export default function Canvas() {
     }
   }
 
+  const editorShape = editingNode && editingStyle ? topicShape(editingStyle, editingNode.width, editingNode.height) : undefined
+
   const editorRect = editingNode
     ? {
         left: screenOf({ x: editingNode.x, y: editingNode.y }).x,
@@ -1064,11 +1069,13 @@ export default function Canvas() {
             const markerSize = 13
             const markerCount = Math.min(markerList.length, 7)
             const labels = node.topic.labels ?? []
+            const attachments = node.topic.attachments ?? []
             const hasImage = Boolean(node.topic.image?.src)
             const imageHeight = hasImage ? Math.min(72, h - 34) : 0
             const textTop = node.y + (hasImage ? imageHeight + 6 : 0)
             const textAreaHeight = h - (hasImage ? imageHeight + 6 : 0) - (labels.length ? 15 : 0)
-            const maxTextWidth = Math.max(24, w - pad * 2)
+            const linkInset = rightTextInset(node.topic)
+            const maxTextWidth = Math.max(24, w - pad - linkInset)
             const lineHeight = style.fontSize * 1.35
             const lines = wrapText(node.topic.title || ' ', maxTextWidth, style.fontSize)
             const maxLines = Math.max(1, Math.floor((textAreaHeight - 4) / lineHeight))
@@ -1076,7 +1083,12 @@ export default function Canvas() {
             const totalTextHeight = visible.length * lineHeight
             const startY = textTop + Math.max(6, (textAreaHeight - totalTextHeight) / 2) + style.fontSize
             const textAnchor = style.textAlign === 'left' ? 'start' : style.textAlign === 'right' ? 'end' : 'middle'
-            const textX = style.textAlign === 'left' ? node.x + pad : style.textAlign === 'right' ? node.x + w - pad : node.x + w / 2
+            const textX =
+              style.textAlign === 'left'
+                ? node.x + pad
+                : style.textAlign === 'right'
+                  ? node.x + w - linkInset
+                  : node.x + (pad + w - linkInset) / 2
             const shapeFill = fillFor(style)
             const rough = style.handDrawn || settings.handDrawnMode || sheet.settings?.handDrawn === true
             return (
@@ -1178,21 +1190,38 @@ export default function Canvas() {
                 ) : null}
 
                 {node.topic.notes?.plain?.content ? (
-                  <text className="topic-note-icon" x={node.x + w - 12} y={node.y + 12} fontSize={10} textAnchor="middle">
+                  <text
+                    className="topic-note-icon"
+                    x={node.x + w - (node.topic.hyperlink ? 32 : 12)}
+                    y={node.y + 12}
+                    fontSize={10}
+                    textAnchor="middle"
+                  >
                     ✎
                   </text>
                 ) : null}
 
                 {node.topic.hyperlink ? (
-                  <text className="topic-link-icon" x={node.x + w - 12} y={node.y + h - 6} fontSize={9} textAnchor="middle">
-                    ↗
-                  </text>
+                  <LinkBadge href={node.topic.hyperlink} x={node.x + w - 21} y={node.y + h / 2 - 6.6} color={style.color} />
                 ) : null}
 
-                {(node.topic.attachments?.length ?? 0) > 0 ? (
-                  <text className="topic-attach-icon" x={node.x + w - 24} y={node.y + h - 6} fontSize={9} textAnchor="middle">
-                    ⧉
-                  </text>
+                {attachments.length ? (
+                  <AttachmentBadge
+                    x={node.x + w - (node.topic.hyperlink ? 39 : 21)}
+                    y={node.y + h / 2 - 6.6}
+                    count={attachments.length}
+                    onOpen={() => {
+                      const path = directAttachmentPath(attachments)
+                      if (path) {
+                        void openExternal(path).then((ok) => {
+                          if (!ok) useUiStore.getState().toast('无法打开附件', 'error')
+                        })
+                        return
+                      }
+                      useMapStore.getState().select([node.id], false)
+                      useUiStore.getState().openDialog('attachment')
+                    }}
+                  />
                 ) : null}
 
                 {node.hasChildren ? (
@@ -1316,7 +1345,9 @@ export default function Canvas() {
             minHeight: Math.max(editorRect.height, 38),
             fontSize: Math.max(11, editingStyle.fontSize * viewport.zoom),
             lineHeight: 1.35,
-            color: editingStyle.color === '#ffffff' ? '#1f2937' : editingStyle.color
+            background: editingStyle.fill,
+            color: editingStyle.color,
+            borderRadius: editorShape && 'rx' in editorShape && typeof editorShape.rx === 'number' ? editorShape.rx * viewport.zoom : 4,
           }}
           value={editingDraft}
           onChange={(event) => useMapStore.getState().updateEditDraft(event.target.value)}
@@ -1466,5 +1497,68 @@ function ContextMenu({
         </>
       )}
     </div>
+  )
+}
+
+/** 主题最右侧的超链接图标：点击用系统默认程序打开。 */
+function LinkBadge({ href, x, y, color }: { href: string; x: number; y: number; color: string }) {
+  return (
+    <g
+      className="topic-link-icon"
+      transform={`translate(${x} ${y})`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        void openExternal(href).then((ok) => {
+          if (!ok) useUiStore.getState().toast('无法打开链接', 'error')
+        })
+      }}
+    >
+      <title>{href}</title>
+      <circle className="topic-link-hit" cx={6.6} cy={6.6} r={11} />
+      <g className="topic-link-glyph" transform="scale(0.55)" stroke={color} strokeWidth={2.4}>
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </g>
+    </g>
+  )
+}
+
+/** 主题上的附件角标：单个附件直接打开，多个附件打开列表。 */
+function AttachmentBadge({
+  x,
+  y,
+  count,
+  onOpen
+}: {
+  x: number
+  y: number
+  count: number
+  onOpen: () => void
+}) {
+  return (
+    <g
+      className="topic-attach-icon"
+      transform={`translate(${x} ${y})`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpen()
+      }}
+    >
+      <title>{`附件（${count}）`}</title>
+      <circle className="topic-attach-hit" cx={6.6} cy={6.6} r={11} />
+      <g
+        transform="scale(0.55)"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+      </g>
+    </g>
   )
 }

@@ -9,6 +9,28 @@ export interface MeasureOptions {
 }
 
 const HORIZONTAL_PADDING = 28
+/** 右侧图标（链接 / 附件）的尺寸与间距。 */
+const RIGHT_ICON = 13
+const RIGHT_ICON_GAP = 8
+const RIGHT_ICON_SPACING = 5
+
+/** 右侧图标数量：超链接、附件各占一格。 */
+export function rightIconCount(topic: Topic): number {
+  return (topic.hyperlink ? 1 : 0) + ((topic.attachments?.length ?? 0) > 0 ? 1 : 0)
+}
+
+/** 文字区域到盒子右边缘的距离；没有右侧图标时为默认 12px 内边距。 */
+export function rightTextInset(topic: Topic): number {
+  const count = rightIconCount(topic)
+  if (!count) return 12
+  return RIGHT_ICON_GAP * 2 + RIGHT_ICON * count + RIGHT_ICON_SPACING * (count - 1)
+}
+
+/** 为右侧图标额外预留的节点宽度。 */
+export function rightIconReserve(topic: Topic): number {
+  const inset = rightTextInset(topic)
+  return inset > 12 ? inset - 12 : 0
+}
 const MIN_WIDTH = 72
 const MAX_WIDTH = 340
 const MARKER_WIDTH = 18
@@ -33,15 +55,17 @@ export function measureTopic(topic: Topic, opts: MeasureOptions): { width: numbe
   const customHeight = positiveNumber(topic.customHeight)
   const hasImage = topic.image !== undefined
 
+  const iconReserve = rightIconReserve(topic)
+
   let width: number
   if (customWidth !== undefined) {
-    width = customWidth
+    width = customWidth + iconReserve
   } else {
     const titleWidth = estimateTextWidth(topic.title ?? '', fontSize)
     const markerWidth = (topic.markers?.length ?? 0) * MARKER_WIDTH
     const maxWidth = isRoot ? 480 : MAX_WIDTH
     width =
-      clamp(Math.ceil(titleWidth + HORIZONTAL_PADDING), MIN_WIDTH, maxWidth) + markerWidth
+      clamp(Math.ceil(titleWidth + HORIZONTAL_PADDING), MIN_WIDTH, maxWidth) + markerWidth + iconReserve
   }
   if (hasImage) width = Math.max(width, IMAGE_MIN_WIDTH)
 
@@ -49,7 +73,8 @@ export function measureTopic(topic: Topic, opts: MeasureOptions): { width: numbe
   if (customHeight !== undefined) {
     height = customHeight
   } else {
-    const textWidth = Math.max(24, width - HORIZONTAL_PADDING)
+    // 文字区域右边界与画布一致：有右侧图标时按图标数量收窄。
+    const textWidth = Math.max(24, width - 12 - rightTextInset(topic))
     const lineCount = Math.max(1, estimateLineCount(topic.title ?? '', textWidth, fontSize))
     height = Math.max(MIN_HEIGHT, lineCount * fontSize * 1.35 + 14)
     if ((topic.labels?.length ?? 0) > 0) height += LABEL_ROW_HEIGHT
