@@ -80,6 +80,11 @@ export function runAction(action: string): void {
       store.paste()
       break
     case 'delete':
+      if (ui.activeRelationId) {
+        store.removeRelationship(ui.activeRelationId)
+        ui.setActiveRelation(undefined)
+        break
+      }
       store.deleteSelection()
       break
     case 'select-all':

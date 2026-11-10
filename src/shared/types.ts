@@ -63,6 +63,8 @@ export interface Relationship {
   end2Id: string
   title?: string
   style?: Style
+  /** 曲线两个控制点：沿弦比例 t 与法线偏移 o，可拖动调整。 */
+  curve?: { t1: number; o1: number; t2: number; o2: number }
 }
 
 export interface TopicChildren {
