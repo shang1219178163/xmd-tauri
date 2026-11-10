@@ -82,8 +82,8 @@ export function useFileOps(): void {
     }
 
     const save = async (saveAs = false): Promise<void> => {
-      const ok = await saveCurrentWorkbook(saveAs)
-      if (ok) useUiStore.getState().toast('已保存', 'success')
+      // 成功不需要提示；失败由 saveCurrentWorkbook 内部弹出错误。
+      await saveCurrentWorkbook(saveAs)
     }
 
     const open = async (path?: string): Promise<void> => {
