@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-10 10:03
+
+### 发布：v1.0.1
+
+- 版本号 1.0.0 → 1.0.1（`package.json`、`src-tauri/tauri.conf.json`）。
+- 发布流程：`release/1.0.1` → `main` → tag `v1.0.1` → 回流 `develop`。
+- GitHub Actions 全绿：Apple Silicon 5m48s、Intel 8m2s。
+- Release：https://github.com/shang1219178163/xmd-tauri/releases/tag/v1.0.1
+- 产物：`xmd_1.0.1_aarch64.dmg`、`xmd_1.0.1_x64.dmg`，以及 `xmd_{aarch64,x64}.app.tar.gz`。
+- 本版包含：文件选择器通配符修复、附件可点击打开（含目录回退）、右侧图标统一布局、中心主题概要/边界修复、编辑态描边与背景修复。
+
 ## 2026-11-10 08:48
 
 ### 修复：文件选择框里所有文件不可选（`b75c5ee`）
