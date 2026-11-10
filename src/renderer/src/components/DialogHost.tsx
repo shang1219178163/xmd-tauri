@@ -326,7 +326,7 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
     void window.desktop?.getAppInfo().then(setInfo)
   }, [])
   return (
-    <Dialog title="关于 xmd" onClose={onClose} footer={<button className="btn primary" onClick={onClose}>关闭</button>}>
+    <Dialog title="关于 xmd" onClose={onClose}>
       <div style={{ textAlign: 'center', padding: '8px 0 14px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
           <AppLogo size={52} />
