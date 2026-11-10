@@ -1,7 +1,7 @@
 {
   "name": "xmd",
   "productName": "xmd",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A complete offline mind-mapping desktop app inspired by Xmind",
   "private": true,
   "type": "module",
