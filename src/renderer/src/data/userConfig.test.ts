@@ -80,7 +80,7 @@ describe('user config', () => {
     })
 
     expect(config.version).toBe(USER_CONFIG_VERSION)
-    expect(config.updatedAt).toBe(123)
+    expect(config.updatedAt).toBe(new Date(123).toISOString())
     expect(Object.keys(config.style.properties).sort()).toEqual([...STYLE_PROPERTIES].sort())
     expect(config.style.properties['fo:color']).toBe('#fff')
     expect(config.style.properties['shape-class']).toBe(DEFAULT_STYLE_PROPERTIES['shape-class'])

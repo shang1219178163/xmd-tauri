@@ -91,7 +91,7 @@ export const DEFAULT_PITCH: UserPitchConfig = {
 export function createDefaultUserConfig(): UserConfig {
   return {
     version: USER_CONFIG_VERSION,
-    updatedAt: 0,
+    updatedAt: '',
     style: { properties: { ...DEFAULT_STYLE_PROPERTIES }, customWidth: null },
     pitch: { ...DEFAULT_PITCH },
     canvas: {
@@ -211,12 +211,19 @@ function normalizeCanvas(value: unknown): UserCanvasConfig {
   }
 }
 
+/** 兼容旧版本的数字时间戳，统一转为 ISO 字符串。 */
+function normalizeUpdatedAt(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' && Number.isFinite(value)) return new Date(value).toISOString()
+  return ''
+}
+
 /** Merges stored data with the complete default schema. */
 export function normalizeUserConfig(value: unknown): UserConfig {
   if (!isRecord(value)) return createDefaultUserConfig()
   return {
     version: USER_CONFIG_VERSION,
-    updatedAt: typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt) ? value.updatedAt : 0,
+    updatedAt: normalizeUpdatedAt(value.updatedAt),
     style: normalizeStyle(value.style),
     pitch: normalizePitch(value.pitch),
     canvas: normalizeCanvas(value.canvas)
@@ -266,7 +273,7 @@ async function persistOrThrow(): Promise<void> {
 }
 
 function schedulePersist(): void {
-  current.updatedAt = Date.now()
+  current.updatedAt = new Date().toISOString()
   if (saveTimer !== undefined) window.clearTimeout(saveTimer)
   saveTimer = window.setTimeout(() => {
     saveTimer = undefined
@@ -361,7 +368,7 @@ export async function importUserConfigFromText(text: string): Promise<UserConfig
   if (!hasSection) throw new Error('解析失败')
 
   current = normalizeUserConfig(parsed)
-  current.updatedAt = Date.now()
+  current.updatedAt = new Date().toISOString()
   await persistOrThrow()
   return getUserConfig()
 }
@@ -369,7 +376,7 @@ export async function importUserConfigFromText(text: string): Promise<UserConfig
 /** Overwrites the local config file with the built-in defaults. */
 export async function resetUserConfig(): Promise<UserConfig> {
   current = createDefaultUserConfig()
-  current.updatedAt = Date.now()
+  current.updatedAt = new Date().toISOString()
   await persistOrThrow()
   return getUserConfig()
 }
@@ -381,7 +388,7 @@ export async function resetUserConfig(): Promise<UserConfig> {
 export async function exportUserConfig(): Promise<SaveFileResult | undefined> {
   const exportText = window.desktop?.exportText
   if (!exportText) return undefined
-  current.updatedAt = Date.now()
+  current.updatedAt = new Date().toISOString()
   const json = `${JSON.stringify(current, null, 2)}\n`
   try {
     const result = await exportText(json, 'xmd-config.json', [

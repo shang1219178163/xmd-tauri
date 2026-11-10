@@ -327,7 +327,8 @@ export interface UserCanvasConfig {
 
 export interface UserConfig {
   version: number
-  updatedAt: number
+  /** ISO 8601 时间字符串，例如 2026-11-10T06:30:00.000Z */
+  updatedAt: string
   style: UserStyleConfig
   pitch: UserPitchConfig
   canvas: UserCanvasConfig
