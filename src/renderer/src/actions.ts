@@ -117,7 +117,6 @@ export function runAction(action: string): void {
     case 'insert-relationship':
       if (store.activeTopicId) {
         ui.setRelationshipFrom(store.activeTopicId)
-        ui.toast('点击目标主题以创建关系线')
       } else {
         ui.toast('请先选择一个主题', 'error')
       }

@@ -465,7 +465,6 @@ export default function Canvas() {
         if (nodeId && nodeId !== relationshipFrom) {
           useMapStore.getState().addRelationship(relationshipFrom, nodeId)
           setRelationshipFrom(undefined)
-          toast('已创建关系线', 'success')
         } else if (!nodeId) {
           setRelationshipFrom(undefined)
         }
@@ -1484,12 +1483,8 @@ export default function Canvas() {
 
       {!sheet.rootTopic.title && !nodes.length ? <div className="canvas-empty">双击空白处创建一个主题</div> : null}
 
-      {nodes.length <= 2 || relationshipFrom ? (
-        <div className="canvas-hint">
-          {relationshipFrom
-            ? '点击目标主题以创建关系线 · Esc 取消'
-            : '双击空白新建 · Tab 子主题 · Enter 同级 · 空格拖动画布 · ⌘/Ctrl+滚轮缩放'}
-        </div>
+      {nodes.length <= 2 && !relationshipFrom ? (
+        <div className="canvas-hint">双击空白新建 · Tab 子主题 · Enter 同级 · 空格拖动画布 · ⌘/Ctrl+滚轮缩放</div>
       ) : null}
 
       {contextMenu ? (
@@ -1591,7 +1586,6 @@ function ContextMenu({
           })}
           {item('插入关系线', () => {
             ui.setRelationshipFrom(topic.id)
-            ui.toast('点击目标主题以完成关系线')
           })}
           {item('插入边界', () => {
             store.select([topic.id], false)
