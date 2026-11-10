@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Boundary, LayoutNode, Point, Relationship, Summary, Topic } from '@shared/types'
 import { rainbowPalette } from '@shared/defaults'
 import { layoutSheet, measureTopic } from '../layout'
-import { LINK_TEXT_INSET } from '../layout/measure'
+import { rightTextInset } from '../layout/measure'
 import { layoutSettingsOf } from '../layout/settings'
 import { useMapStore } from '../store/mapStore'
 import { useUiStore } from '../store/uiStore'
@@ -1074,7 +1074,7 @@ export default function Canvas() {
             const imageHeight = hasImage ? Math.min(72, h - 34) : 0
             const textTop = node.y + (hasImage ? imageHeight + 6 : 0)
             const textAreaHeight = h - (hasImage ? imageHeight + 6 : 0) - (labels.length ? 15 : 0)
-            const linkInset = node.topic.hyperlink ? LINK_TEXT_INSET : pad
+            const linkInset = rightTextInset(node.topic)
             const maxTextWidth = Math.max(24, w - pad - linkInset)
             const lineHeight = style.fontSize * 1.35
             const lines = wrapText(node.topic.title || ' ', maxTextWidth, style.fontSize)
