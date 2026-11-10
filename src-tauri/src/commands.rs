@@ -99,15 +99,25 @@ fn body_text(request: &Request<'_>) -> Result<String, String> {
     String::from_utf8(body_bytes(request)?).map_err(|err| format!("文本编码错误：{err}"))
 }
 
+/// macOS 把过滤器里的 `*` 当成字面扩展名，会让所有文件都不可选。
+/// 只要出现通配符就不加过滤器，交给系统显示全部文件。
+fn has_wildcard(filters: &[DialogFilter]) -> bool {
+    filters
+        .iter()
+        .any(|filter| filter.extensions.iter().any(|ext| ext == "*"))
+}
+
 fn save_dialog(
     app: &AppHandle,
     default_name: &str,
     filters: &[DialogFilter],
 ) -> Option<PathBuf> {
     let mut dialog = app.dialog().file().set_file_name(default_name);
-    for filter in filters {
-        let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
-        dialog = dialog.add_filter(&filter.name, &extensions);
+    if !has_wildcard(filters) {
+        for filter in filters {
+            let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
+            dialog = dialog.add_filter(&filter.name, &extensions);
+        }
     }
     dialog.blocking_save_file()?.into_path().ok()
 }
@@ -127,7 +137,6 @@ pub async fn dialog_open_workbook(app: AppHandle) -> Result<DialogResult, String
         .file()
         .set_title("打开 Xmind 文件")
         .add_filter("Xmind Workbook", &["xmind"])
-        .add_filter("All Files", &["*"])
         .blocking_pick_file();
     let Some(file) = picked else {
         return Ok(DialogResult::canceled());
@@ -143,9 +152,11 @@ pub async fn dialog_pick_file(
     filters: Vec<DialogFilter>,
 ) -> Result<DialogResult, String> {
     let mut dialog = app.dialog().file();
-    for filter in &filters {
-        let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
-        dialog = dialog.add_filter(&filter.name, &extensions);
+    if !has_wildcard(&filters) {
+        for filter in &filters {
+            let extensions: Vec<&str> = filter.extensions.iter().map(String::as_str).collect();
+            dialog = dialog.add_filter(&filter.name, &extensions);
+        }
     }
     let Some(file) = dialog.blocking_pick_file() else {
         return Ok(DialogResult::canceled());
