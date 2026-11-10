@@ -490,25 +490,45 @@ pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
             .map_err(|err| err.to_string());
     }
 
-    if let Some(rest) = target.strip_prefix("~/") {
-        if let Ok(home) = std::env::var("HOME") {
-            return app
-                .opener()
-                .open_path(format!("{home}/{rest}"), None::<&str>)
-                .map_err(|err| err.to_string());
-        }
-    }
-
-    if Path::new(target).is_absolute() {
-        return app
-            .opener()
-            .open_path(target.to_string(), None::<&str>)
-            .map_err(|err| err.to_string());
+    let path = expand_home(target);
+    if path.is_absolute() {
+        return open_local(&app, path);
     }
 
     // 裸域名按网页处理。
     app.opener()
         .open_url(format!("https://{target}"), None::<&str>)
+        .map_err(|err| err.to_string())
+}
+
+/// 展开 `~/` 前缀；其余原样返回。
+fn expand_home(target: &str) -> PathBuf {
+    if let Some(rest) = target.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return Path::new(&home).join(rest);
+        }
+    }
+    PathBuf::from(target)
+}
+
+/// 打开本地文件或目录；文件打不开（不存在、没有默认程序）时退回到所在目录。
+fn open_local(app: &AppHandle, path: PathBuf) -> Result<(), String> {
+    let shown = path.to_string_lossy().to_string();
+    if app.opener().open_path(shown, None::<&str>).is_ok() {
+        return Ok(());
+    }
+
+    let dir = if path.is_dir() {
+        path
+    } else {
+        match path.parent() {
+            Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
+            _ => return Err(format!("无法打开 {}，也找不到所在目录", path.display())),
+        }
+    };
+
+    app.opener()
+        .open_path(dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|err| err.to_string())
 }
 

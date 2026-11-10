@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import mammoth from 'mammoth'
 import { createEmptyWorkbook, createStarterWorkbook } from '@shared/defaults'
-import type { Workbook } from '@shared/types'
+import type { AttachmentRef, Workbook } from '@shared/types'
 import type { FileAction } from '../actions'
 import { applyTheme } from '../actions'
+import { openExternal } from '../desktop'
 import { readXmind, writeXmind } from '../file/xmind'
 import { markdownToWorkbook, workbookToMarkdown } from '../file/markdown'
 import { opmlToWorkbook, workbookToOpml } from '../file/opml'
@@ -366,12 +367,18 @@ export async function insertImageFromClipboard(): Promise<void> {
   ui.toast('已从剪贴板插入图片', 'success')
 }
 
+/** 用系统默认程序打开附件（仅支持带本地路径的附件）。 */
+export async function openAttachment(ref: AttachmentRef): Promise<boolean> {
+  if (!ref.path) return false
+  return openExternal(ref.path)
+}
+
 export async function addAttachmentFromDisk(): Promise<void> {
   if (!window.desktop) return
   const store = useMapStore.getState()
   const ui = useUiStore.getState()
   const target = store.activeTopicId ?? store.getActiveSheet().rootTopic.id
-  const result = await window.desktop.pickFile([{ name: 'All Files', extensions: ['*'] }])
+  const result = await window.desktop.pickFile([{ name: '所有文件', extensions: ['*'] }])
   if (result.canceled || !result.filePath) return
   const topic = store.getTopic(target)
   const name = result.filePath.split(/[\\/]/).pop() ?? 'attachment'

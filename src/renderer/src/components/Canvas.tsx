@@ -28,6 +28,7 @@ import {
 } from '../model/style'
 import { braceVerticalPath, edgeToPath } from '../model/edge-path'
 import { markerById } from '../data/markers'
+import { directAttachmentPath } from '../model/attachment'
 import { openExternal } from '../desktop'
 
 interface Interaction {
@@ -1068,6 +1069,7 @@ export default function Canvas() {
             const markerSize = 13
             const markerCount = Math.min(markerList.length, 7)
             const labels = node.topic.labels ?? []
+            const attachments = node.topic.attachments ?? []
             const hasImage = Boolean(node.topic.image?.src)
             const imageHeight = hasImage ? Math.min(72, h - 34) : 0
             const textTop = node.y + (hasImage ? imageHeight + 6 : 0)
@@ -1203,16 +1205,23 @@ export default function Canvas() {
                   <LinkBadge href={node.topic.hyperlink} x={node.x + w - 21} y={node.y + h / 2 - 6.6} color={style.color} />
                 ) : null}
 
-                {(node.topic.attachments?.length ?? 0) > 0 ? (
-                  <text
-                    className="topic-attach-icon"
-                    x={node.x + w - (node.topic.hyperlink ? 38 : 24)}
-                    y={node.y + h - 6}
-                    fontSize={9}
-                    textAnchor="middle"
-                  >
-                    ⧉
-                  </text>
+                {attachments.length ? (
+                  <AttachmentBadge
+                    x={node.x + w - (node.topic.hyperlink ? 39 : 21)}
+                    y={node.y + h / 2 - 6.6}
+                    count={attachments.length}
+                    onOpen={() => {
+                      const path = directAttachmentPath(attachments)
+                      if (path) {
+                        void openExternal(path).then((ok) => {
+                          if (!ok) useUiStore.getState().toast('无法打开附件', 'error')
+                        })
+                        return
+                      }
+                      useMapStore.getState().select([node.id], false)
+                      useUiStore.getState().openDialog('attachment')
+                    }}
+                  />
                 ) : null}
 
                 {node.hasChildren ? (
@@ -1511,6 +1520,44 @@ function LinkBadge({ href, x, y, color }: { href: string; x: number; y: number; 
         <path d="M15 3h6v6" />
         <path d="M10 14 21 3" />
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </g>
+    </g>
+  )
+}
+
+/** 主题上的附件角标：单个附件直接打开，多个附件打开列表。 */
+function AttachmentBadge({
+  x,
+  y,
+  count,
+  onOpen
+}: {
+  x: number
+  y: number
+  count: number
+  onOpen: () => void
+}) {
+  return (
+    <g
+      className="topic-attach-icon"
+      transform={`translate(${x} ${y})`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpen()
+      }}
+    >
+      <title>{`附件（${count}）`}</title>
+      <circle className="topic-attach-hit" cx={6.6} cy={6.6} r={11} />
+      <g
+        transform="scale(0.55)"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
       </g>
     </g>
   )

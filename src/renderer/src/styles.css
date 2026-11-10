@@ -511,10 +511,22 @@ button {
   pointer-events: none;
 }
 
-.topic-note-icon,
-.topic-attach-icon {
+.topic-note-icon {
   color: var(--ink-soft);
   pointer-events: none;
+}
+
+.topic-attach-icon {
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.topic-attach-icon .topic-attach-hit {
+  fill: transparent;
+}
+
+.topic-attach-icon:hover {
+  color: var(--accent);
 }
 
 .topic-link-icon {
