@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-10 14:45
+
+### 发布：v1.0.0 再次覆盖（含最新 UI 调整）
+
+- 删除旧 `v1.0.0` Release/tag，在 `ca15863` 重新打 tag 并推送。
+- Actions 全绿：Apple Silicon 1m49s、Intel 5m25s。
+- 产物：`xmd_1.0.0_aarch64.dmg`、`xmd_1.0.0_x64.dmg` 及 `xmd_{aarch64,x64}.app.tar.gz`。
+- 本版包含：图标 108px、保存成功静默、关系线提示移除、`updatedAt` ISO 字符串、关于弹窗调整。
+
 ## 2026-11-10 14:35
 
 ### 调整：关于弹窗移除右下角关闭按钮
