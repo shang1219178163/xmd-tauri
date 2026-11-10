@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-10 14:06
+
+### 发布：v1.0.0 重新构建（覆盖旧包）
+
+- 删除旧的 `v1.0.0` Release 与 tag，同时清理了此前的 `v1.0.1` tag/Release。
+- `develop` 合入 `main`（`89bba08`），重新打 `v1.0.0` 触发 Actions，构建完成后 `develop` 回灌。
+- 版本号文件（`package.json`、`src-tauri/tauri.conf.json`）回退到 `1.0.0` 与 tag 对齐，提交 `89c461f`。
+- Actions 全绿：Apple Silicon 1m48s、Intel 6m28s。
+- Release：https://github.com/shang1219178163/xmd-tauri/releases/tag/v1.0.0
+- 产物：`xmd_1.0.0_aarch64.dmg`、`xmd_1.0.0_x64.dmg`，以及 `xmd_{aarch64,x64}.app.tar.gz`。
+- 该版本包含关系线可视化编辑（弧度控制点、颜色、删除）等全部最新改动。
+
 ## 2026-11-10 13:29
 
 ### 新增：关系线可视化编辑
