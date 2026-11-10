@@ -1,6 +1,7 @@
 import { useMapStore } from './store/mapStore'
 import { useUiStore } from './store/uiStore'
 import { runTextCommand } from './editing'
+import { attachedOf, findParent } from './model/tree'
 
 export type FileAction =
   | 'new-map'
@@ -116,14 +117,46 @@ export function runAction(action: string): void {
         ui.toast('请先选择一个主题', 'error')
       }
       break
-    case 'insert-boundary':
-      if (store.selection.length) store.addBoundary(store.selection)
-      else ui.toast('请先选择主题', 'error')
+    case 'insert-boundary': {
+      const selection = store.selection
+      if (!selection.length) {
+        ui.toast('请先选择主题', 'error')
+        break
+      }
+      const last = selection[selection.length - 1]
+      if (findParent(sheet.rootTopic, last)) {
+        store.addBoundary(selection)
+        break
+      }
+      // 选中的是中心主题：没有父级可挂，改为包围它的全部子主题。
+      const children = attachedOf(sheet.rootTopic).map((topic) => topic.id)
+      if (!children.length) {
+        ui.toast('中心主题下没有可包围的子主题', 'error')
+        break
+      }
+      store.addBoundary(children)
       break
-    case 'insert-summary':
-      if (store.selection.length) store.addSummary(store.selection)
-      else ui.toast('请先选择主题', 'error')
+    }
+    case 'insert-summary': {
+      const selection = store.selection
+      if (!selection.length) {
+        ui.toast('请先选择主题', 'error')
+        break
+      }
+      const last = selection[selection.length - 1]
+      if (findParent(sheet.rootTopic, last)) {
+        store.addSummary(selection)
+        break
+      }
+      // 选中的是中心主题：没有父级可挂，改为汇总它的全部子主题。
+      const children = attachedOf(sheet.rootTopic).map((topic) => topic.id)
+      if (!children.length) {
+        ui.toast('中心主题下没有可汇总的子主题', 'error')
+        break
+      }
+      store.addSummary(children)
       break
+    }
     case 'insert-image':
       ui.openDialog('image')
       break
