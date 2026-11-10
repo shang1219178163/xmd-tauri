@@ -33,6 +33,7 @@ export interface UiState {
   zen: boolean
   pitch: boolean
   relationshipFrom?: string
+  activeRelationId?: string
   toasts: Toast[]
   commandOpen: boolean
   exporting: boolean
@@ -47,6 +48,7 @@ export interface UiState {
   setZen(zen: boolean): void
   setPitch(pitch: boolean): void
   setRelationshipFrom(id?: string): void
+  setActiveRelation(id?: string): void
   toast(message: string, tone?: Toast['tone']): void
   dismissToast(id: number): void
   setCommandOpen(open: boolean): void
@@ -63,6 +65,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   zen: false,
   pitch: false,
   relationshipFrom: undefined,
+  activeRelationId: undefined,
   toasts: [],
   commandOpen: false,
   exporting: false,
@@ -95,6 +98,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
   setRelationshipFrom(id) {
     set({ relationshipFrom: id })
+  },
+  setActiveRelation(id) {
+    set({ activeRelationId: id })
   },
   toast(message, tone = 'info') {
     toastId += 1

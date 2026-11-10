@@ -162,6 +162,8 @@ export interface MapState {
   addSummary(ids: string[], title?: string): void
   removeSummary(id: string): void
   addRelationship(fromId: string, toId: string): string | undefined
+  setRelationshipCurve(id: string, curve: Relationship['curve']): void
+  setRelationshipColor(id: string, color?: string): void
   removeRelationship(id: string): void
 
   moveTopic(id: string, newParentId: string, index?: number, history?: boolean): void
@@ -843,6 +845,31 @@ export function createMapStore() {
         const relation: Relationship = { id: generateId('relation'), end1Id: fromId, end2Id: toId, title: '' }
         mutateSheet((sheet) => ({ ...sheet, relationships: [...(sheet.relationships ?? []), relation] }))
         return relation.id
+      },
+
+      setRelationshipCurve(id, curve) {
+        mutateSheet(
+          (sheet) => ({
+            ...sheet,
+            relationships: (sheet.relationships ?? []).map((relation) =>
+              relation.id === id ? { ...relation, curve } : relation
+            )
+          }),
+          false
+        )
+      },
+
+      setRelationshipColor(id, color) {
+        mutateSheet((sheet) => ({
+          ...sheet,
+          relationships: (sheet.relationships ?? []).map((relation) => {
+            if (relation.id !== id) return relation
+            const properties = { ...(relation.style?.properties ?? {}) }
+            if (color) properties['line-color'] = color
+            else delete properties['line-color']
+            return { ...relation, style: { ...relation.style, properties } }
+          })
+        }))
       },
 
       removeRelationship(id) {

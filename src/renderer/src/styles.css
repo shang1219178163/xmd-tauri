@@ -547,6 +547,24 @@ button {
   opacity: 0.6;
 }
 
+.relationship-hit {
+  cursor: grab;
+}
+
+.relationship-handle {
+  fill: #ffffff;
+  stroke-width: 1.6;
+  cursor: grab;
+}
+
+.relationship-handle:active {
+  cursor: grabbing;
+}
+
+.relationship-hit:active {
+  cursor: grabbing;
+}
+
 .topic-collapse {
   cursor: pointer;
 }

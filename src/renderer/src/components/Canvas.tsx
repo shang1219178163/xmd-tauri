@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Boundary, LayoutNode, Point, Relationship, Summary, Topic } from '@shared/types'
 import { rainbowPalette } from '@shared/defaults'
 import { layoutSheet, measureTopic } from '../layout'
@@ -29,6 +30,7 @@ import {
 import { braceVerticalPath, edgeToPath } from '../model/edge-path'
 import { markerById } from '../data/markers'
 import { directAttachmentPath } from '../model/attachment'
+import { bentPath, curveMidpoint, projectToControls, relationshipControls, toCurveControls } from '../model/relationship'
 import { openExternal } from '../desktop'
 
 interface Interaction {
@@ -58,6 +60,7 @@ interface ContextMenuState {
   x: number
   y: number
   topicId?: string
+  relationId?: string
   world: Point
 }
 
@@ -90,7 +93,17 @@ function boundingBox(nodes: LayoutNode[], ids: string[], pad: number) {
   return { x: minX - pad, y: minY - pad, width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 }
 }
 
-function curvePath(a: Point, b: Point, kind: string): string {
+const RELATION_DEFAULT_COLOR = '#1f2937'
+
+function relationColor(rel: Relationship): string {
+  return (rel.style?.properties?.['line-color'] as string) ?? RELATION_DEFAULT_COLOR
+}
+
+function relationMarkerId(color: string): string {
+  return `relationship-arrow-${color.replace(/[^a-zA-Z0-9]/g, '')}`
+}
+
+function curvePath(a: Point, b: Point, kind: string, curve?: Relationship['curve']): string {
   if (kind === 'straight') return `M ${a.x} ${a.y} L ${b.x} ${b.y}`
   if (kind === 'elbow') {
     const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y)
@@ -101,6 +114,7 @@ function curvePath(a: Point, b: Point, kind: string): string {
     const mid = (a.y + b.y) / 2
     return `M ${a.x} ${a.y} L ${a.x} ${mid} L ${b.x} ${mid} L ${b.x} ${b.y}`
   }
+  if (kind === 'curve') return bentPath(a, b, curve)
   const dx = Math.abs(b.x - a.x)
   const dy = Math.abs(b.y - a.y)
   if (dx >= dy) {
@@ -188,6 +202,11 @@ export default function Canvas() {
     }),
     [viewport]
   )
+
+  const relDrag = useRef<{ id: string; handle: 1 | 2 } | null>(null)
+  const [hoverRelation, setHoverRelation] = useState<string | null>(null)
+  const activeRelation = useUiStore((s) => s.activeRelationId)
+  const setActiveRelation = useUiStore((s) => s.setActiveRelation)
 
   const localPoint = useCallback((event: { clientX: number; clientY: number }): Point => {
     const rect = svgRef.current?.getBoundingClientRect()
@@ -433,6 +452,7 @@ export default function Canvas() {
   const onPointerDown = useCallback(
     (event: React.PointerEvent<SVGSVGElement>) => {
       if (event.button === 2) return
+      setActiveRelation(undefined)
       setContextMenu(null)
       dragPreviewRef.current = null
       setDragPreview(null)
@@ -904,9 +924,20 @@ export default function Canvas() {
         onContextMenu={onContextMenu}
       >
         <defs>
-          <marker id="relationship-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#e8a23a" />
-          </marker>
+          {Array.from(new Set(relationships.map(relationColor))).map((color) => (
+            <marker
+              key={color}
+              id={relationMarkerId(color)}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+            </marker>
+          ))}
           <filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0f1a14" floodOpacity="0.10" />
           </filter>
@@ -1022,22 +1053,113 @@ export default function Canvas() {
             const b = nodeMap.get(rel.end2Id)!
             const p1 = { x: a.x + a.width / 2, y: a.y + a.height / 2 }
             const p2 = { x: b.x + b.width / 2, y: b.y + b.height / 2 }
-            const color = (rel.style?.properties?.['line-color'] as string) ?? '#f59e0b'
+            const color = relationColor(rel)
+            const d = curvePath(p1, p2, 'curve', rel.curve)
+            const label = curveMidpoint(p1, p2, rel.curve)
+            const { c1, c2 } = relationshipControls(p1, p2, rel.curve)
+            const showHandles =
+              hoverRelation === rel.id || activeRelation === rel.id || relDrag.current?.id === rel.id
+
+            const dragStart = (event: ReactPointerEvent<SVGCircleElement>, handle: 1 | 2) => {
+              event.stopPropagation()
+              event.currentTarget.setPointerCapture(event.pointerId)
+              relDrag.current = { id: rel.id, handle }
+              useMapStore.getState().beginTransaction()
+            }
+
+            const dragMove = (event: ReactPointerEvent<SVGCircleElement>) => {
+              const drag = relDrag.current
+              if (!drag || drag.id !== rel.id) return
+              event.stopPropagation()
+              const world = toWorld(localPoint(event))
+              const state = useMapStore.getState()
+              const relation = (state.getActiveSheet().relationships ?? []).find((item) => item.id === rel.id)
+              const base = toCurveControls(p1, p2, relation?.curve)
+              const projected = projectToControls(p1, p2, world)
+              const t = Math.min(1, Math.max(0, projected.t))
+              state.setRelationshipCurve(
+                rel.id,
+                drag.handle === 1
+                  ? { ...base, t1: t, o1: projected.o }
+                  : { ...base, t2: t, o2: projected.o }
+              )
+            }
+
+            const dragEnd = () => {
+              if (relDrag.current?.id !== rel.id) return
+              relDrag.current = null
+              useMapStore.getState().endTransaction()
+            }
+
             return (
-              <g key={rel.id}>
+              <g
+                key={rel.id}
+                onPointerEnter={() => setHoverRelation(rel.id)}
+                onPointerLeave={() => {
+                  if (!relDrag.current) setHoverRelation((current) => (current === rel.id ? null : current))
+                }}
+              >
                 <path
-                  d={curvePath(p1, p2, 'curve')}
+                  d={d}
                   fill="none"
                   stroke={color}
                   strokeWidth={2}
                   strokeDasharray="6 4"
-                  markerEnd="url(#relationship-arrow)"
+                  markerEnd={`url(#${relationMarkerId(color)})`}
+                />
+                <path
+                  d={d}
+                  className="relationship-hit"
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={14}
+                  onPointerDown={(event) => {
+                    // 阻止画布根节点进入框选并抢占指针捕获，否则后续 click 不会落到这条线上
+                    event.stopPropagation()
+                    setActiveRelation(rel.id)
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setActiveRelation(rel.id)
+                    setContextMenu({
+                      x: event.clientX,
+                      y: event.clientY,
+                      relationId: rel.id,
+                      world: toWorld(localPoint(event))
+                    })
+                  }}
                 />
                 {rel.title ? (
-                  <text x={(p1.x + p2.x) / 2} y={(p1.y + p2.y) / 2 - 6} textAnchor="middle" fontSize={10} fill={color}>
+                  <text x={label.x} y={label.y - 6} textAnchor="middle" fontSize={10} fill={color}>
                     {rel.title}
                   </text>
                 ) : null}
+                {showHandles ? (
+                  <>
+                    <line x1={p1.x} y1={p1.y} x2={c1.x} y2={c1.y} stroke={color} strokeWidth={1.8} opacity={0.6} />
+                    <line x1={p2.x} y1={p2.y} x2={c2.x} y2={c2.y} stroke={color} strokeWidth={1.8} opacity={0.6} />
+                  </>
+                ) : null}
+                {showHandles
+                  ? ([1, 2] as const).map((handle) => {
+                      const point = handle === 1 ? c1 : c2
+                      return (
+                        <circle
+                          key={handle}
+                          className="relationship-handle"
+                          cx={point.x}
+                          cy={point.y}
+                          r={6 / viewport.zoom}
+                          stroke={color}
+                          onPointerDown={(event) => dragStart(event, handle)}
+                          onPointerMove={dragMove}
+                          onPointerUp={dragEnd}
+                          onPointerCancel={dragEnd}
+                        />
+                      )
+                    })
+                  : null}
               </g>
             )
           })}
@@ -1436,7 +1558,24 @@ function ContextMenu({
       style={{ left: Math.min(state.x, window.innerWidth - 230), top: Math.min(state.y, window.innerHeight - 320) }}
       onMouseDown={(event) => event.stopPropagation()}
     >
-      {topic ? (
+      {state.relationId ? (
+        <>
+          {item('修改关系线颜色', () => {
+            store.setActivePanel('style')
+            onClose()
+          })}
+          <div className="context-sep" />
+          {item(
+            '删除关系线',
+            () => {
+              store.removeRelationship(state.relationId!)
+              ui.setActiveRelation(undefined)
+              onClose()
+            },
+            true
+          )}
+        </>
+      ) : topic ? (
         <>
           {item('编辑主题', () => store.beginEdit(topic.id))}
           {item('插入子主题', () => store.addChild(topic.id))}

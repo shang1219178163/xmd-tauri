@@ -111,6 +111,9 @@ export default function StylePanel() {
   const updateTopic = useMapStore((s) => s.updateTopic)
   const setStructure = useMapStore((s) => s.setStructure)
   const setSheetSetting = useMapStore((s) => s.setSheetSetting)
+  const setRelationshipColor = useMapStore((s) => s.setRelationshipColor)
+  const activeRelationId = useUiStore((s) => s.activeRelationId)
+  const relation = sheet.relationships?.find((item) => item.id === activeRelationId)
   const toast = useUiStore((s) => s.toast)
 
   const targetId = activeTopicId ?? sheet.rootTopic.id
@@ -149,6 +152,21 @@ export default function StylePanel() {
 
   return (
     <div>
+      {relation ? (
+        <Section title="关系线">
+          <div className="insp-row">
+            <span>颜色</span>
+            <div style={{ marginLeft: 'auto' }}>
+              <ColorDot
+                title="关系线颜色"
+                value={relation.style?.properties?.['line-color'] as string | undefined}
+                fallback="#1f2937"
+                onChange={(value) => setRelationshipColor(relation.id, value)}
+              />
+            </div>
+          </div>
+        </Section>
+      ) : null}
       <Section title="形状" preview={<span className="mini-preview rounded" />}>
         <div className="insp-row">
           <span>形状</span>

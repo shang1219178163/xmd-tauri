@@ -5,6 +5,13 @@
  * positions. Edges are drawn first, then relationship curves, boundaries are
  * omitted and topic shapes/text/markers/labels/images are layered on top.
  */
+import { bentPath, curveMidpoint } from '../model/relationship'
+
+const RELATION_DEFAULT_COLOR = '#1f2937'
+
+function relationMarkerId(color: string): string {
+  return `relationship-arrow-${color.replace(/[^a-zA-Z0-9]/g, '')}`
+}
 import type {
   EdgeKind,
   LayoutDecoration,
@@ -253,16 +260,17 @@ function relationshipsMarkup(sheet: Sheet, nodes: Map<string, LayoutNode>): stri
     if (!from || !to) continue
     const a = { x: from.x + from.width / 2, y: from.y + from.height / 2 }
     const b = { x: to.x + to.width / 2, y: to.y + to.height / 2 }
-    const color = colorOf(relationship.style?.properties?.['line-color'], '#f59e0b')
+    const color = colorOf(relationship.style?.properties?.['line-color'], RELATION_DEFAULT_COLOR)
+    const label = curveMidpoint(a, b, relationship.curve)
     parts.push(
-      `<path d="${edgePath(a, b, 'curve')}" fill="none" stroke="${escapeXml(
+      `<path d="${bentPath(a, b, relationship.curve)}" fill="none" stroke="${escapeXml(
         color
-      )}" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#relationship-arrow)"/>`
+      )}" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#${relationMarkerId(color)})"/>`
     )
     if (relationship.title) {
       parts.push(
-        `<text x="${round((a.x + b.x) / 2)}" y="${round(
-          (a.y + b.y) / 2 - 6
+        `<text x="${round(label.x)}" y="${round(
+          label.y - 6
         )}" text-anchor="middle" font-size="10" fill="${escapeXml(color)}">${escapeXml(
           relationship.title
         )}</text>`
@@ -381,11 +389,22 @@ export function sheetToSvg(workbook: Workbook): SvgResult {
     })
     .join('')
   const relationships = relationshipsMarkup(sheet, layout.nodes)
+  const relationshipMarkers = () =>
+    Array.from(
+      new Set((sheet.relationships ?? []).map((rel) => colorOf(rel.style?.properties?.['line-color'], RELATION_DEFAULT_COLOR)))
+    )
+      .map(
+        (color) =>
+          `<marker id="${relationMarkerId(color)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${escapeXml(
+            color
+          )}"/></marker>`
+      )
+      .join('')
 
   const svg = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    `<defs><marker id="relationship-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/></marker><filter id="rough-edge" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="1" seed="9" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="1.35" xChannelSelector="R" yChannelSelector="G"/></filter>${hatchDefs}</defs>`,
+    `<defs>${relationshipMarkers()}<filter id="rough-edge" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="1" seed="9" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="1.35" xChannelSelector="R" yChannelSelector="G"/></filter>${hatchDefs}</defs>`,
     `<rect x="0" y="0" width="${width}" height="${height}" fill="${escapeXml(backgroundOf(sheet))}"/>`,
     `<g transform="translate(${round(offsetX)} ${round(offsetY)})">`,
     decorations,
